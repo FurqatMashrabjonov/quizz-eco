@@ -12,5 +12,3 @@ Route::middleware(['auth'])->group(function () {
 
     Route::livewire('quiz', 'pages::quiz')->name('quiz');
 });
-
-require __DIR__.'/settings.php';

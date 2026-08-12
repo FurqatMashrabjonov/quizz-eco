@@ -13,6 +13,7 @@ use App\Models\QuizSetting;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -132,11 +133,22 @@ new #[Title('Test')] class extends Component {
     }
 
     /**
+     * The start screen reads settings from several places; without memoizing,
+     * each read is its own query.
+     */
+    #[Computed]
+    public function settings(): QuizSetting
+    {
+        return QuizSetting::current();
+    }
+
+    /**
      * Render the configured duration as "2 soat 30 daqiqa" rather than "150 daqiqa".
      */
+    #[Computed]
     public function durationLabel(): string
     {
-        $minutes = QuizSetting::current()->duration_minutes;
+        $minutes = $this->settings->duration_minutes;
 
         $hours = intdiv($minutes, 60);
         $remainder = $minutes % 60;
@@ -148,14 +160,16 @@ new #[Title('Test')] class extends Component {
         };
     }
 
+    #[Computed]
     public function questionCount(): int
     {
         return min(
-            QuizSetting::current()->questions_per_attempt,
+            $this->settings->questions_per_attempt,
             Question::query()->where('is_active', true)->count(),
         );
     }
 
+    #[Computed]
     public function attemptsRemaining(): int
     {
         $finishedCount = Attempt::query()
@@ -163,7 +177,7 @@ new #[Title('Test')] class extends Component {
             ->whereNotNull('finished_at')
             ->count();
 
-        return max(0, QuizSetting::current()->max_attempts - $finishedCount);
+        return max(0, $this->settings->max_attempts - $finishedCount);
     }
 
     /**
@@ -210,7 +224,7 @@ new #[Title('Test')] class extends Component {
                 <div class="space-y-2 text-center">
                     <flux:heading size="xl">{{ __('Boshlashga tayyormisiz?') }}</flux:heading>
                     <flux:text class="text-sm sm:text-base">
-                        {{ __(':count ta savol · :minutes daqiqa', ['count' => QuizSetting::current()->questions_per_attempt, 'minutes' => QuizSetting::current()->duration_minutes]) }}
+                        {{ __(':count ta savol · :duration', ['count' => $this->questionCount, 'duration' => $this->durationLabel]) }}
                     </flux:text>
                 </div>
             @endif
@@ -219,13 +233,13 @@ new #[Title('Test')] class extends Component {
                 <flux:callout variant="danger" icon="exclamation-triangle" :heading="$error" />
             @endif
 
-            @if ($this->attemptsRemaining() > 0)
+            @if ($this->attemptsRemaining > 0)
                 <flux:modal.trigger name="start-quiz">
                     <flux:button variant="primary" class="w-full py-3 text-base sm:py-4 sm:text-lg">
                         {{ $attempt?->isFinished() ? __('Qayta boshlash') : __('Testni boshlash') }}
                     </flux:button>
                 </flux:modal.trigger>
-                <flux:text class="text-center text-sm sm:text-base">{{ __(':count ta urinish qoldi', ['count' => $this->attemptsRemaining()]) }}</flux:text>
+                <flux:text class="text-center text-sm sm:text-base">{{ __(':count ta urinish qoldi', ['count' => $this->attemptsRemaining]) }}</flux:text>
             @else
                 <flux:callout variant="secondary" icon="check-circle" :heading="__('Urinishlar tugadi.')" />
             @endif
@@ -241,15 +255,15 @@ new #[Title('Test')] class extends Component {
                 <div class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
                     <div class="flex items-center justify-between p-3">
                         <flux:text>{{ __('Savollar soni') }}</flux:text>
-                        <flux:text class="font-semibold">{{ $this->questionCount() }} {{ __('ta') }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->questionCount }} {{ __('ta') }}</flux:text>
                     </div>
                     <div class="flex items-center justify-between p-3">
                         <flux:text>{{ __('Berilgan vaqt') }}</flux:text>
-                        <flux:text class="font-semibold">{{ $this->durationLabel() }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->durationLabel }}</flux:text>
                     </div>
                     <div class="flex items-center justify-between p-3">
                         <flux:text>{{ __('Qolgan urinishlar') }}</flux:text>
-                        <flux:text class="font-semibold">{{ $this->attemptsRemaining() }} {{ __('ta') }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->attemptsRemaining }} {{ __('ta') }}</flux:text>
                     </div>
                 </div>
 

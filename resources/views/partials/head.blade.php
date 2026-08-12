@@ -12,4 +12,17 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+{{--
+    Flux falls back to the operating system preference when no choice is
+    stored. Seed it with light so first-time visitors get a light screen,
+    while anyone who has picked a theme keeps theirs. Must run before
+    @fluxAppearance, which reads this value.
+--}}
+<script>
+    if (! window.localStorage.getItem('flux.appearance')) {
+        window.localStorage.setItem('flux.appearance', 'light')
+    }
+</script>
+
 @fluxAppearance

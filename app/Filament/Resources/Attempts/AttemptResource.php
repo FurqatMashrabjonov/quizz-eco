@@ -56,6 +56,12 @@ class AttemptResource extends Resource
                     ->placeholder('Jarayonda'),
                 RepeatableEntry::make('answers')
                     ->label('Javoblar')
+                    // Loaded here rather than in getEloquentQuery() so the list page
+                    // isn't made to fetch every answer of every row. loadMissing()
+                    // keeps this cheap even though the closure runs per row.
+                    ->state(fn (Attempt $record) => $record
+                        ->loadMissing(['answers.question.options', 'answers.option'])
+                        ->answers)
                     ->columnSpanFull()
                     ->table([
                         TableColumn::make('Savol'),
