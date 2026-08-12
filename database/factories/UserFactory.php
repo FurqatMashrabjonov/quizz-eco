@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Support\CredentialSuggester;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,7 +20,7 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
-        $password = Str::password(10);
+        $password = app(CredentialSuggester::class)->password();
 
         return [
             'name' => fake()->name(),

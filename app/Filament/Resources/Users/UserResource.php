@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
@@ -25,6 +26,15 @@ class UserResource extends Resource
     protected static ?string $pluralModelLabel = 'Foydalanuvchilar';
 
     protected static ?string $navigationLabel = 'Foydalanuvchilar';
+
+    /**
+     * Admins are provisioned through the `quiz:create-admin` console command,
+     * so this resource only ever lists and manages test takers.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->where('role', 'user');
+    }
 
     public static function form(Schema $schema): Schema
     {

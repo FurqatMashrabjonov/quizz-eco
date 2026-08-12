@@ -5,19 +5,19 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Filament\Resources\Users\UserResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class CreateUser extends CreateRecord
 {
     protected static string $resource = UserResource::class;
 
+    /**
+     * The `password` attribute is hashed by a model cast, so the readable copy
+     * has to be captured before it is written.
+     */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $password = Str::password(10);
-
-        $data['password'] = Hash::make($password);
-        $data['plain_password'] = $password;
+        $data['plain_password'] = $data['password'];
+        $data['role'] = 'user';
 
         return $data;
     }
