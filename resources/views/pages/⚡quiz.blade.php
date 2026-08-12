@@ -10,6 +10,7 @@ use App\Models\Attempt;
 use App\Models\Option;
 use App\Models\Question;
 use App\Models\QuizSetting;
+use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Title;
@@ -52,6 +53,9 @@ new #[Title('Test')] class extends Component {
 
     public function start(): void
     {
+        // Closed either way: on failure the message is rendered behind the modal.
+        Flux::modals()->close();
+
         try {
             $this->attempt = app(StartAttempt::class)->handle(Auth::user());
             $this->currentIndex = 0;
@@ -127,6 +131,31 @@ new #[Title('Test')] class extends Component {
         return count($this->attempt->layout) - 1;
     }
 
+    /**
+     * Render the configured duration as "2 soat 30 daqiqa" rather than "150 daqiqa".
+     */
+    public function durationLabel(): string
+    {
+        $minutes = QuizSetting::current()->duration_minutes;
+
+        $hours = intdiv($minutes, 60);
+        $remainder = $minutes % 60;
+
+        return match (true) {
+            $hours === 0 => __(':count daqiqa', ['count' => $remainder]),
+            $remainder === 0 => __(':count soat', ['count' => $hours]),
+            default => __(':hours soat :minutes daqiqa', ['hours' => $hours, 'minutes' => $remainder]),
+        };
+    }
+
+    public function questionCount(): int
+    {
+        return min(
+            QuizSetting::current()->questions_per_attempt,
+            Question::query()->where('is_active', true)->count(),
+        );
+    }
+
     public function attemptsRemaining(): int
     {
         $finishedCount = Attempt::query()
@@ -191,14 +220,64 @@ new #[Title('Test')] class extends Component {
             @endif
 
             @if ($this->attemptsRemaining() > 0)
-                <flux:button wire:click="start" variant="primary" class="w-full py-3 text-base sm:py-4 sm:text-lg">
-                    {{ $attempt?->isFinished() ? __('Qayta boshlash') : __('Testni boshlash') }}
-                </flux:button>
+                <flux:modal.trigger name="start-quiz">
+                    <flux:button variant="primary" class="w-full py-3 text-base sm:py-4 sm:text-lg">
+                        {{ $attempt?->isFinished() ? __('Qayta boshlash') : __('Testni boshlash') }}
+                    </flux:button>
+                </flux:modal.trigger>
                 <flux:text class="text-center text-sm sm:text-base">{{ __(':count ta urinish qoldi', ['count' => $this->attemptsRemaining()]) }}</flux:text>
             @else
                 <flux:callout variant="secondary" icon="check-circle" :heading="__('Urinishlar tugadi.')" />
             @endif
         </flux:card>
+
+        <flux:modal name="start-quiz" class="w-full max-w-md">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('Testni boshlashdan oldin') }}</flux:heading>
+                    <flux:text class="mt-2">{{ __('Quyidagilarni diqqat bilan o\'qing.') }}</flux:text>
+                </div>
+
+                <div class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+                    <div class="flex items-center justify-between p-3">
+                        <flux:text>{{ __('Savollar soni') }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->questionCount() }} {{ __('ta') }}</flux:text>
+                    </div>
+                    <div class="flex items-center justify-between p-3">
+                        <flux:text>{{ __('Berilgan vaqt') }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->durationLabel() }}</flux:text>
+                    </div>
+                    <div class="flex items-center justify-between p-3">
+                        <flux:text>{{ __('Qolgan urinishlar') }}</flux:text>
+                        <flux:text class="font-semibold">{{ $this->attemptsRemaining() }} {{ __('ta') }}</flux:text>
+                    </div>
+                </div>
+
+                <ul class="space-y-2">
+                    @foreach ([
+                        __('Vaqt boshlangandan keyin to\'xtamaydi — sahifani yopsangiz ham sanoq davom etadi.'),
+                        __('Test tugaguncha sahifadan chiqmang va brauzerni yopmang.'),
+                        __('Har bir javob avtomatik saqlanadi, savollar orasida erkin harakatlanishingiz mumkin.'),
+                        __('Test yakunlangach javoblarni o\'zgartirib bo\'lmaydi.'),
+                    ] as $rule)
+                        <li class="flex gap-2">
+                            <flux:icon.exclamation-triangle variant="mini" class="mt-0.5 shrink-0 text-amber-500" />
+                            <flux:text class="text-sm">{{ $rule }}</flux:text>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <div class="flex gap-2">
+                    <flux:spacer />
+                    <flux:modal.close>
+                        <flux:button variant="ghost">{{ __('Bekor qilish') }}</flux:button>
+                    </flux:modal.close>
+                    <flux:button wire:click="start" variant="primary">
+                        {{ __('Boshlash') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
     @else
         <div
             class="mx-auto max-w-5xl space-y-4"

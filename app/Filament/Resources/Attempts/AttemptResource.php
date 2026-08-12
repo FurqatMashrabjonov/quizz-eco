@@ -6,6 +6,9 @@ use App\Filament\Resources\Attempts\Pages\ManageAttempts;
 use App\Models\Answer;
 use App\Models\Attempt;
 use BackedEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -119,6 +122,16 @@ class AttemptResource extends Resource
             ])
             ->recordActions([
                 ViewAction::make(),
+                // Deleting an attempt frees up the user's quota so they can retake.
+                DeleteAction::make()
+                    ->modalHeading('Urinishni o\'chirish')
+                    ->modalDescription('Urinish va undagi barcha javoblar o\'chiriladi. Bu foydalanuvchiga qaytadan test topshirish imkonini beradi.')
+                    ->successNotificationTitle('Urinish o\'chirildi'),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

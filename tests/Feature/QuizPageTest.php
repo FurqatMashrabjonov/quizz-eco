@@ -25,6 +25,40 @@ test('a user with no attempt sees the start screen', function () {
         ->assertSee('Testni boshlash');
 });
 
+test('the start screen warns about the rules before the test begins', function () {
+    QuizSetting::current()->update(['duration_minutes' => 120, 'max_attempts' => 2]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test('pages::quiz')
+        ->assertSee('Testni boshlashdan oldin')
+        ->assertSee('2 soat')
+        ->assertSee('Savollar soni')
+        ->assertSee('Qolgan urinishlar')
+        ->assertSee('sanoq davom etadi', escape: false);
+});
+
+test('the duration is worded in hours and minutes', function (int $minutes, string $expected) {
+    QuizSetting::current()->update(['duration_minutes' => $minutes]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test('pages::quiz')
+        ->assertSee($expected);
+})->with([
+    'under an hour' => [45, '45 daqiqa'],
+    'whole hours' => [120, '2 soat'],
+    'hours and minutes' => [90, '1 soat 30 daqiqa'],
+]);
+
+test('the warning shows how many questions will actually be drawn', function () {
+    Question::query()->delete();
+    Question::factory(4)->create();
+    QuizSetting::current()->update(['questions_per_attempt' => 60]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test('pages::quiz')
+        ->assertSee('4');
+});
+
 test('starting the quiz creates an attempt and shows the first question', function () {
     $user = User::factory()->create();
 
