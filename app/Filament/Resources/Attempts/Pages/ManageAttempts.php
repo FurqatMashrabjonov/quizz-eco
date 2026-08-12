@@ -4,9 +4,9 @@ namespace App\Filament\Resources\Attempts\Pages;
 
 use App\Filament\Resources\Attempts\AttemptResource;
 use App\Models\Attempt;
+use App\Support\XlsxExport;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ManageRecords;
-use Illuminate\Support\Facades\Response;
 
 class ManageAttempts extends ManageRecords
 {
@@ -15,36 +15,36 @@ class ManageAttempts extends ManageRecords
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('exportCsv')
-                ->label('CSV eksport')
+            Action::make('export')
+                ->label('Excel eksport')
+                ->icon('heroicon-m-arrow-down-tray')
                 ->color('gray')
-                ->action(fn () => Response::streamDownload(function () {
-                    $handle = fopen('php://output', 'w');
-                    fputcsv($handle, ['Ism', 'Login', "To'g'ri", 'Xato', 'Jami', 'Ball %', 'Boshlangan vaqti', 'Tugagan vaqti']);
-
-                    Attempt::query()
-                        ->with('user')
-                        ->orderByDesc('started_at')
-                        ->each(function (Attempt $attempt) use ($handle) {
-                            $wrong = $attempt->isFinished() ? $attempt->total - $attempt->score : null;
-                            $percentage = $attempt->isFinished() && $attempt->total > 0
-                                ? round($attempt->score / $attempt->total * 100).'%'
-                                : null;
-
-                            fputcsv($handle, [
-                                $attempt->user->name,
-                                $attempt->user->username,
-                                $attempt->score,
-                                $wrong,
-                                $attempt->total,
-                                $percentage,
-                                $attempt->started_at,
-                                $attempt->finished_at,
-                            ]);
-                        });
-
-                    fclose($handle);
-                }, 'urinishlar.csv')),
+                ->action(fn () => XlsxExport::download(
+                    'urinishlar.xlsx',
+                    ['Ism', 'Login', "To'g'ri", 'Xato', 'Jami', 'Ball %', 'Boshlangan vaqti', 'Tugagan vaqti'],
+                    $this->exportRows(),
+                )),
         ];
+    }
+
+    /**
+     * @return iterable<array<int, string|int|null>>
+     */
+    private function exportRows(): iterable
+    {
+        foreach (Attempt::query()->with('user')->orderByDesc('started_at')->lazy() as $attempt) {
+            yield [
+                $attempt->user->name,
+                $attempt->user->username,
+                $attempt->score,
+                $attempt->isFinished() ? $attempt->total - $attempt->score : null,
+                $attempt->total,
+                $attempt->isFinished() && $attempt->total > 0
+                    ? (int) round($attempt->score / $attempt->total * 100)
+                    : null,
+                $attempt->started_at?->format('d.m.Y H:i'),
+                $attempt->finished_at?->format('d.m.Y H:i'),
+            ];
+        }
     }
 }

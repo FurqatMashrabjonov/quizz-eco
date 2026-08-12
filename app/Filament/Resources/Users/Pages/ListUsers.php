@@ -4,12 +4,12 @@ namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Support\XlsxExport;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Illuminate\Support\Facades\Response;
 
 class ListUsers extends ListRecords
 {
@@ -36,28 +36,35 @@ class ListUsers extends ListRecords
                     Notification::make()
                         ->success()
                         ->title("{$data['count']} ta foydalanuvchi yaratildi")
-                        ->body('Login va parollarni yuklab olish uchun "CSV eksport" tugmasidan foydalaning.')
+                        ->body('Login va parollarni yuklab olish uchun "Excel eksport" tugmasidan foydalaning.')
                         ->send();
                 }),
-            Action::make('exportCsv')
-                ->label('CSV eksport')
+            Action::make('export')
+                ->label('Excel eksport')
+                ->icon('heroicon-m-arrow-down-tray')
                 ->color('gray')
-                ->action(fn () => Response::streamDownload(function () {
-                    $handle = fopen('php://output', 'w');
-                    fputcsv($handle, ['Ism', 'Login', 'Parol', 'Rol']);
-
-                    User::query()->orderBy('name')->each(function (User $user) use ($handle) {
-                        fputcsv($handle, [
-                            $user->name,
-                            $user->username,
-                            $user->plain_password,
-                            $user->role === 'admin' ? 'Administrator' : 'Foydalanuvchi',
-                        ]);
-                    });
-
-                    fclose($handle);
-                }, 'foydalanuvchilar.csv')),
+                ->action(fn () => XlsxExport::download(
+                    'foydalanuvchilar.xlsx',
+                    ['Ism', 'Login', 'Parol'],
+                    $this->exportRows(),
+                )),
             CreateAction::make(),
         ];
+    }
+
+    /**
+     * @return iterable<array<int, string|null>>
+     */
+    private function exportRows(): iterable
+    {
+        // Scoped to the resource query, so admin accounts stay out of the
+        // credential sheet that gets printed and handed around.
+        foreach (static::getResource()::getEloquentQuery()->orderBy('name')->lazy() as $user) {
+            yield [
+                $user->name,
+                $user->username,
+                $user->plain_password,
+            ];
+        }
     }
 }

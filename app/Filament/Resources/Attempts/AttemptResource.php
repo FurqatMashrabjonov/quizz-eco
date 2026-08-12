@@ -10,6 +10,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\RepeatableEntry\TableColumn;
@@ -18,8 +20,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class AttemptResource extends Resource
 {
@@ -84,38 +90,66 @@ class AttemptResource extends Resource
             ]);
     }
 
+    /**
+     * Sort on a derived value. The direction is whitelisted rather than
+     * interpolated, since it reaches the query as a raw fragment.
+     *
+     * @return \Closure(Builder, string): Builder
+     */
+    private static function sortByExpression(string $expression): \Closure
+    {
+        return fn (Builder $query, string $direction): Builder => $query->orderByRaw(
+            $expression.' '.($direction === 'asc' ? 'asc' : 'desc')
+        );
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
                 TextColumn::make('user.name')
                     ->label('Foydalanuvchi')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('user.username')
                     ->label('Login')
-                    ->searchable(),
+                    ->fontFamily('mono')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('score')
                     ->label("To'g'ri")
+                    ->sortable()
                     ->placeholder('-'),
                 TextColumn::make('wrong')
                     ->label('Xato')
                     ->getStateUsing(fn (Attempt $record) => $record->isFinished() ? $record->total - $record->score : null)
+                    ->sortable(query: self::sortByExpression('total - score'))
                     ->placeholder('-'),
                 TextColumn::make('total')
-                    ->label('Jami'),
+                    ->label('Jami')
+                    ->sortable(),
                 TextColumn::make('percentage')
                     ->label('Ball')
+                    ->badge()
                     ->getStateUsing(fn (Attempt $record) => $record->isFinished() && $record->total > 0
                         ? round($record->score / $record->total * 100).'%'
                         : null)
+                    // Percentage isn't stored, so ordering is done on the ratio.
+                    ->sortable(query: self::sortByExpression('CASE WHEN total > 0 THEN score * 1.0 / total END'))
+                    ->color(fn (?string $state) => match (true) {
+                        $state === null => 'gray',
+                        (int) $state >= 60 => 'success',
+                        default => 'danger',
+                    })
                     ->placeholder('-'),
                 TextColumn::make('started_at')
                     ->label('Boshlangan vaqti')
-                    ->dateTime()
+                    ->dateTime('d.m.Y H:i')
                     ->sortable(),
                 TextColumn::make('finished_at')
                     ->label('Tugagan vaqti')
-                    ->dateTime()
+                    ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->placeholder('Jarayonda'),
             ])
@@ -124,8 +158,78 @@ class AttemptResource extends Resource
                 SelectFilter::make('user_id')
                     ->label('Foydalanuvchi')
                     ->relationship('user', 'name')
-                    ->searchable(),
+                    ->searchable()
+                    ->preload(),
+                TernaryFilter::make('finished_at')
+                    ->label('Holati')
+                    ->placeholder('Hammasi')
+                    ->trueLabel('Yakunlangan')
+                    ->falseLabel('Jarayonda')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('finished_at'),
+                        false: fn (Builder $query) => $query->whereNull('finished_at'),
+                        blank: fn (Builder $query) => $query,
+                    ),
+                Filter::make('percentage')
+                    ->label('Ball oralig\'i')
+                    ->schema([
+                        TextInput::make('from')
+                            ->label('Dan (%)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100),
+                        TextInput::make('until')
+                            ->label('Gacha (%)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100),
+                    ])
+                    ->query(fn (Builder $query, array $data) => $query
+                        ->when(filled($data['from']), fn (Builder $q) => $q
+                            ->whereNotNull('finished_at')
+                            ->where('total', '>', 0)
+                            ->whereRaw('score * 100.0 >= total * ?', [(float) $data['from']]))
+                        ->when(filled($data['until']), fn (Builder $q) => $q
+                            ->whereNotNull('finished_at')
+                            ->where('total', '>', 0)
+                            ->whereRaw('score * 100.0 <= total * ?', [(float) $data['until']])))
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+
+                        if (filled($data['from'])) {
+                            $indicators[] = "Ball {$data['from']}% dan";
+                        }
+
+                        if (filled($data['until'])) {
+                            $indicators[] = "Ball {$data['until']}% gacha";
+                        }
+
+                        return $indicators;
+                    }),
+                Filter::make('started_at')
+                    ->label('Sana')
+                    ->schema([
+                        DatePicker::make('from')->label('Dan'),
+                        DatePicker::make('until')->label('Gacha'),
+                    ])
+                    ->query(fn (Builder $query, array $data) => $query
+                        ->when($data['from'], fn (Builder $q, $date) => $q->whereDate('started_at', '>=', $date))
+                        ->when($data['until'], fn (Builder $q, $date) => $q->whereDate('started_at', '<=', $date)))
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+
+                        if ($data['from']) {
+                            $indicators[] = 'Sana: '.Carbon::parse($data['from'])->format('d.m.Y').' dan';
+                        }
+
+                        if ($data['until']) {
+                            $indicators[] = 'Sana: '.Carbon::parse($data['until'])->format('d.m.Y').' gacha';
+                        }
+
+                        return $indicators;
+                    }),
             ])
+            ->filtersFormColumns(2)
             ->recordActions([
                 ViewAction::make(),
                 // Deleting an attempt frees up the user's quota so they can retake.

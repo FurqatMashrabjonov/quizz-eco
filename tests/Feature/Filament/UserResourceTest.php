@@ -111,10 +111,10 @@ test('the users table shows the plain-text password, not the hash', function () 
         ->assertDontSee($user->password);
 });
 
-test('the export csv action downloads a file', function () {
+test('the export action downloads an xlsx file', function () {
     User::factory()->count(2)->create();
 
     Livewire::test(ListUsers::class)
-        ->callAction('exportCsv')
-        ->assertFileDownloaded('foydalanuvchilar.csv');
+        ->callAction('export')
+        ->assertFileDownloaded('foydalanuvchilar.xlsx');
 });

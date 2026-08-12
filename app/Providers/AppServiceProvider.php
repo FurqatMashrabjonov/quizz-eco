@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Http\Responses\FilamentLogoutResponse;
 use Carbon\CarbonImmutable;
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(LogoutResponse::class, FilamentLogoutResponse::class);
     }
 
     /**

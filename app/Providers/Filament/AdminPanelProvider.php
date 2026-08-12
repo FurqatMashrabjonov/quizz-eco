@@ -26,7 +26,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            // No panel login page: the app has a single sign-in at /login, and
+            // Filament falls back to the `login` route for unauthenticated users.
             ->colors([
                 'primary' => '#1D9BF0',
             ])
