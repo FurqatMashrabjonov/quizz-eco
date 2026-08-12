@@ -3,39 +3,17 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
+    <body class="min-h-screen overflow-x-hidden bg-white dark:bg-zinc-800">
         <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <a href="{{ route('dashboard') }}" class="text-base font-semibold text-zinc-900 dark:text-white" wire:navigate>
+            <a
+                href="{{ route('dashboard') }}"
+                class="min-w-0 shrink truncate text-base font-semibold text-zinc-900 dark:text-white"
+                wire:navigate
+            >
                 {{ config('app.name') }}
             </a>
 
             <flux:spacer />
-
-            <div
-                x-data="{
-                    scale: parseInt(localStorage.getItem('fontScale')) || 100,
-                    apply() {
-                        const el = document.getElementById('main-content')
-                        if (el) el.style.zoom = this.scale / 100
-                        localStorage.setItem('fontScale', this.scale)
-                    },
-                }"
-                x-init="apply()"
-                class="flex items-center gap-2"
-            >
-                <flux:icon.minus variant="mini" class="text-zinc-400" />
-                <input
-                    type="range"
-                    min="85"
-                    max="130"
-                    step="5"
-                    x-model.number="scale"
-                    x-on:input="apply()"
-                    class="h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-(--color-accent) dark:bg-zinc-700 sm:w-24"
-                    :aria-label="__('Matn hajmi')"
-                />
-                <flux:icon.plus variant="mini" class="text-zinc-400" />
-            </div>
 
             <flux:button
                 x-data
@@ -49,7 +27,9 @@
             </flux:button>
 
             <flux:dropdown position="bottom" align="end">
+                {{-- The width cap lets a long name ellipsize instead of widening the header. --}}
                 <flux:profile
+                    class="min-w-0 max-w-36 sm:max-w-64"
                     :name="auth()->user()->name"
                     :initials="auth()->user()->initials()"
                     icon-trailing="chevron-down"
