@@ -19,6 +19,15 @@ class DatabaseSeeder extends Seeder
     {
         QuizSetting::current();
 
+        // Demo accounts use a known weak password and the questions are lorem
+        // ipsum, so they must never reach production. Use `quiz:create-admin`
+        // there instead.
+        if (app()->isProduction()) {
+            $this->command?->warn('Production detected: seeded settings only. Run `php artisan quiz:create-admin <login>` to create an admin.');
+
+            return;
+        }
+
         User::factory()->admin()->create([
             'name' => 'Admin',
             'username' => 'admin',
