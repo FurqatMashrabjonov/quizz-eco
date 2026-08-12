@@ -129,6 +129,45 @@ test('the navigator lets a user jump to any question and change a previous answe
         ->toBe($otherOptionId);
 });
 
+test('starting with an empty question bank shows a message instead of crashing', function () {
+    Question::query()->delete();
+
+    $user = User::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->call('start')
+        ->assertSuccessful()
+        ->assertSee('savollar mavjud emas');
+
+    expect(Attempt::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('an attempt left over with an empty layout is discarded rather than rendered', function () {
+    // Older releases could persist this; the page must recover, not 500.
+    $user = User::factory()->create();
+    $broken = Attempt::factory()->for($user)->create(['layout' => []]);
+
+    Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->assertSuccessful()
+        ->assertSee('Boshlashga tayyormisiz?');
+
+    expect(Attempt::query()->whereKey($broken->id)->exists())->toBeFalse();
+});
+
+test('a finished attempt with an empty layout is left alone', function () {
+    $user = User::factory()->create();
+    $finished = Attempt::factory()->for($user)->finished(score: 0, total: 0)->create(['layout' => []]);
+
+    Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->assertSuccessful()
+        ->assertSee('Test yakunlandi');
+
+    expect(Attempt::query()->whereKey($finished->id)->exists())->toBeTrue();
+});
+
 test('revisiting the page after time runs out finishes the attempt automatically', function () {
     $user = User::factory()->create();
 

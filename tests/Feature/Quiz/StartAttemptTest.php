@@ -2,6 +2,7 @@
 
 use App\Actions\Quiz\StartAttempt;
 use App\Exceptions\MaxAttemptsReachedException;
+use App\Exceptions\NoQuestionsAvailableException;
 use App\Models\Attempt;
 use App\Models\Question;
 use App\Models\QuizSetting;
@@ -75,4 +76,35 @@ test('a new attempt can start after a previous one finished, within the attempt 
 
     expect($attempt->exists)->toBeTrue()
         ->and(Attempt::query()->where('user_id', $user->id)->count())->toBe(2);
+});
+
+test('it refuses to create an attempt when there are no questions to draw from', function () {
+    Question::query()->delete();
+
+    $user = User::factory()->create();
+
+    expect(fn () => app(StartAttempt::class)->handle($user))
+        ->toThrow(NoQuestionsAvailableException::class);
+
+    expect(Attempt::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('it also refuses when every question has been deactivated', function () {
+    Question::query()->update(['is_active' => false]);
+
+    $user = User::factory()->create();
+
+    expect(fn () => app(StartAttempt::class)->handle($user))
+        ->toThrow(NoQuestionsAvailableException::class);
+});
+
+test('it draws whatever questions exist when there are fewer than requested', function () {
+    Question::query()->delete();
+    Question::factory(3)->create();
+
+    QuizSetting::current()->update(['questions_per_attempt' => 60]);
+
+    $attempt = app(StartAttempt::class)->handle(User::factory()->create());
+
+    expect($attempt->layout)->toHaveCount(3);
 });

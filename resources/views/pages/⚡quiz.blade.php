@@ -5,6 +5,7 @@ use App\Actions\Quiz\StartAttempt;
 use App\Actions\Quiz\SubmitAnswer;
 use App\Exceptions\AttemptExpiredException;
 use App\Exceptions\MaxAttemptsReachedException;
+use App\Exceptions\NoQuestionsAvailableException;
 use App\Models\Attempt;
 use App\Models\Option;
 use App\Models\Question;
@@ -30,6 +31,14 @@ new #[Title('Test')] class extends Component {
             ->latest('id')
             ->first();
 
+        // Older releases could create an attempt while the question bank was
+        // empty. Such an attempt has nothing to render, so discard it and let
+        // the user start again.
+        if ($this->attempt && ! $this->attempt->isFinished() && $this->attempt->layout === []) {
+            $this->attempt->delete();
+            $this->attempt = null;
+        }
+
         if ($this->attempt && ! $this->attempt->isFinished() && $this->attempt->isExpired()) {
             app(FinishAttempt::class)->handle($this->attempt);
             $this->attempt->refresh();
@@ -48,7 +57,7 @@ new #[Title('Test')] class extends Component {
             $this->currentIndex = 0;
             $this->error = null;
             $this->loadSelectedOption();
-        } catch (MaxAttemptsReachedException $e) {
+        } catch (MaxAttemptsReachedException|NoQuestionsAvailableException $e) {
             $this->error = $e->getMessage();
         }
     }

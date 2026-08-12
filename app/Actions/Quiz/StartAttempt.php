@@ -3,6 +3,7 @@
 namespace App\Actions\Quiz;
 
 use App\Exceptions\MaxAttemptsReachedException;
+use App\Exceptions\NoQuestionsAvailableException;
 use App\Models\Attempt;
 use App\Models\Option;
 use App\Models\Question;
@@ -48,9 +49,17 @@ class StartAttempt
                     throw new MaxAttemptsReachedException;
                 }
 
+                $layout = $this->buildLayout($settings->questions_per_attempt);
+
+                // An attempt with no questions cannot be rendered or scored, so
+                // refuse to create one rather than leaving the user stuck with it.
+                if ($layout === []) {
+                    throw new NoQuestionsAvailableException;
+                }
+
                 return Attempt::create([
                     'user_id' => $user->id,
-                    'layout' => $this->buildLayout($settings->questions_per_attempt),
+                    'layout' => $layout,
                     'started_at' => now(),
                     'expires_at' => now()->addMinutes($settings->duration_minutes),
                 ]);
