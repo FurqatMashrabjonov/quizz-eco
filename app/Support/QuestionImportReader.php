@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Question;
 use OpenSpout\Reader\XLSX\Reader;
 
 /**
@@ -10,6 +9,10 @@ use OpenSpout\Reader\XLSX\Reader;
  * that order) into rows classified for preview, without touching the
  * database. The "Javob" column names the correct option by letter (a/b/c/d).
  * "Izoh" is an optional explanation and may be blank.
+ *
+ * Questions with an identical body are intentionally allowed to import more
+ * than once (both within the file and against the existing bank) since the
+ * question bank permits duplicate wording.
  */
 class QuestionImportReader
 {
@@ -20,11 +23,6 @@ class QuestionImportReader
     {
         $raw = self::readCells($path);
 
-        // One query for every question body in the file, instead of one per row.
-        $bodies = collect($raw)->pluck('body')->filter()->unique()->values();
-        $existing = Question::query()->whereIn('body', $bodies)->pluck('body')->flip();
-
-        $seen = [];
         $rows = [];
 
         foreach ($raw as $entry) {
@@ -35,16 +33,7 @@ class QuestionImportReader
                 && $entry['options']['d'] !== ''
                 && in_array($entry['answer'], ['a', 'b', 'c', 'd'], true);
 
-            $status = match (true) {
-                ! $isValid => 'invalid',
-                isset($seen[$entry['body']]) => 'duplicate',
-                isset($existing[$entry['body']]) => 'exists',
-                default => 'new',
-            };
-
-            if ($status === 'new') {
-                $seen[$entry['body']] = true;
-            }
+            $status = $isValid ? 'new' : 'invalid';
 
             $rows[] = [...$entry, 'status' => $status];
         }

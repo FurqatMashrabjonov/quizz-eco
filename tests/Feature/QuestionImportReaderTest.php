@@ -70,18 +70,18 @@ test('it lowercases the answer letter', function () {
     unlink($path);
 });
 
-test('it flags a question body that already exists in the database', function () {
+test('it still imports a question body that already exists in the database', function () {
     Question::factory()->create(['body' => 'Takrorlangan savol']);
     $path = makeQuestionImportFile([['Takrorlangan savol', '1', '2', '3', '4', 'a']]);
 
     $rows = QuestionImportReader::parse($path);
 
-    expect($rows[0]['status'])->toBe('exists');
+    expect($rows[0]['status'])->toBe('new');
 
     unlink($path);
 });
 
-test('it flags the second occurrence of a question repeated within the file', function () {
+test('it still imports every occurrence of a question repeated within the file', function () {
     $path = makeQuestionImportFile([
         ['Bir xil savol', '1', '2', '3', '4', 'a'],
         ['Bir xil savol', '1', '2', '3', '4', 'b'],
@@ -90,7 +90,7 @@ test('it flags the second occurrence of a question repeated within the file', fu
     $rows = QuestionImportReader::parse($path);
 
     expect($rows[0]['status'])->toBe('new')
-        ->and($rows[1]['status'])->toBe('duplicate');
+        ->and($rows[1]['status'])->toBe('new');
 
     unlink($path);
 });

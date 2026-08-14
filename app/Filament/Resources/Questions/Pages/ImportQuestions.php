@@ -99,7 +99,7 @@ class ImportQuestions extends Page
         Notification::make()
             ->success()
             ->title("{$newRows->count()} ta savol import qilindi")
-            ->body($skipped > 0 ? "{$skipped} ta qator o'tkazib yuborildi (mavjud, takror yoki xato)." : null)
+            ->body($skipped > 0 ? "{$skipped} ta qator o'tkazib yuborildi (xato)." : null)
             ->send();
 
         $this->redirect(QuestionResource::getUrl('index'));
@@ -112,22 +112,7 @@ class ImportQuestions extends Page
     {
         return [
             'new' => collect($this->rows)->where('status', 'new')->count(),
-            'exists' => collect($this->rows)->where('status', 'exists')->count(),
-            'duplicate' => collect($this->rows)->where('status', 'duplicate')->count(),
             'invalid' => collect($this->rows)->where('status', 'invalid')->count(),
         ];
-    }
-
-    /**
-     * A heuristic nudge, not a hard rule: if most rows already exist, this is
-     * probably the same file being uploaded again.
-     */
-    public function looksAlreadyImported(): bool
-    {
-        if ($this->rows === []) {
-            return false;
-        }
-
-        return $this->counts()['exists'] / count($this->rows) > 0.7;
     }
 }

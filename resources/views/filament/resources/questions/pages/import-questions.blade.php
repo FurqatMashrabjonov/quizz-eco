@@ -13,16 +13,8 @@
         <div class="space-y-4">
             <div class="flex flex-wrap gap-2">
                 <x-filament::badge color="success">Yangi: {{ $counts['new'] }}</x-filament::badge>
-                <x-filament::badge color="gray">Mavjud: {{ $counts['exists'] }}</x-filament::badge>
-                <x-filament::badge color="warning">Takror: {{ $counts['duplicate'] }}</x-filament::badge>
                 <x-filament::badge color="danger">Xato: {{ $counts['invalid'] }}</x-filament::badge>
             </div>
-
-            @if ($this->looksAlreadyImported())
-                <x-filament::badge color="warning" icon="heroicon-m-exclamation-triangle">
-                    Diqqat: qatorlarning aksariyati allaqachon mavjud — bu fayl avvalroq import qilingan bo'lishi mumkin.
-                </x-filament::badge>
-            @endif
 
             @if (count($rows) > 0)
                 <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">
@@ -55,8 +47,6 @@
                                         @php
                                             [$label, $color] = match ($row['status']) {
                                                 'new' => ["Yangi", 'success'],
-                                                'exists' => ["Mavjud", 'gray'],
-                                                'duplicate' => ["Takror", 'warning'],
                                                 'invalid' => ["Xato", 'danger'],
                                             };
                                         @endphp

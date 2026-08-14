@@ -49,14 +49,11 @@ test('uploading a file shows a preview before anything is saved', function () {
     expect(Question::query()->where('body', '2+2 nechiga teng?')->exists())->toBeFalse();
 });
 
-test('confirming the import creates only the new rows and marks the right option correct', function () {
-    Question::factory()->create(['body' => 'Allaqachon mavjud savol']);
-
+test('confirming the import creates only the valid rows and marks the right option correct', function () {
     Livewire::test(ImportQuestions::class)
         ->set('data.file', [])
         ->upload('data.file', [uploadableQuestionImportFile([
             ['Yangi savol', '1', '2', '3', '4', 'c'],
-            ['Allaqachon mavjud savol', '1', '2', '3', '4', 'a'],
             ['', 'no', 'body', 'here', '', 'a'],
         ])])
         ->call('preview')
@@ -67,6 +64,33 @@ test('confirming the import creates only the new rows and marks the right option
     expect($created)->not->toBeNull()
         ->and($created->options)->toHaveCount(4)
         ->and($created->options->firstWhere('is_correct', true)->body)->toBe('3');
+});
+
+test('a question body that already exists in the database is imported again rather than skipped', function () {
+    Question::factory()->create(['body' => 'Allaqachon mavjud savol']);
+
+    Livewire::test(ImportQuestions::class)
+        ->set('data.file', [])
+        ->upload('data.file', [uploadableQuestionImportFile([
+            ['Allaqachon mavjud savol', '1', '2', '3', '4', 'a'],
+        ])])
+        ->call('preview')
+        ->call('import');
+
+    expect(Question::query()->where('body', 'Allaqachon mavjud savol')->count())->toBe(2);
+});
+
+test('a question body repeated within the file is imported for every occurrence', function () {
+    Livewire::test(ImportQuestions::class)
+        ->set('data.file', [])
+        ->upload('data.file', [uploadableQuestionImportFile([
+            ['Bir xil savol', '1', '2', '3', '4', 'a'],
+            ['Bir xil savol', '1', '2', '3', '4', 'b'],
+        ])])
+        ->call('preview')
+        ->call('import');
+
+    expect(Question::query()->where('body', 'Bir xil savol')->count())->toBe(2);
 });
 
 test('the explanation column is saved on the question', function () {
@@ -97,14 +121,13 @@ test('the existing question is left untouched by a repeat import', function () {
     expect($existing->options()->count())->toBe($optionCountBefore);
 });
 
-test('importing with no new rows does nothing', function () {
-    Question::factory()->create(['body' => 'Allaqachon mavjud savol']);
+test('importing with only invalid rows does nothing', function () {
     $countBefore = Question::query()->count();
 
     Livewire::test(ImportQuestions::class)
         ->set('data.file', [])
         ->upload('data.file', [uploadableQuestionImportFile([
-            ['Allaqachon mavjud savol', '1', '2', '3', '4', 'a'],
+            ['', 'no', 'body', 'here', '', 'a'],
         ])])
         ->call('preview')
         ->call('import');
