@@ -18,6 +18,11 @@ class ListUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('import')
+                ->label('Excel import')
+                ->icon('heroicon-m-arrow-up-tray')
+                ->color('gray')
+                ->url(UserResource::getUrl('import')),
             Action::make('generateUsers')
                 ->label('Foydalanuvchi yaratish')
                 ->color('gray')
