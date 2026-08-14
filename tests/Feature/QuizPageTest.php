@@ -21,7 +21,6 @@ test('a user with no attempt sees the start screen', function () {
 
     Livewire::actingAs($user)
         ->test('pages::quiz')
-        ->assertSee('Boshlashga tayyormisiz?')
         ->assertSee('Testni boshlash');
 });
 
@@ -123,7 +122,7 @@ test('a user only ever sees their own attempt, never another user\'s', function 
 
     Livewire::actingAs($userB)
         ->test('pages::quiz')
-        ->assertSee('Boshlashga tayyormisiz?')
+        ->assertSee('Testni boshlash')
         ->assertDontSee('1 / 3');
 
     expect(Attempt::query()->where('user_id', $userB->id)->count())->toBe(0);
@@ -185,7 +184,7 @@ test('an attempt left over with an empty layout is discarded rather than rendere
     Livewire::actingAs($user)
         ->test('pages::quiz')
         ->assertSuccessful()
-        ->assertSee('Boshlashga tayyormisiz?');
+        ->assertSee('Testni boshlash');
 
     expect(Attempt::query()->whereKey($broken->id)->exists())->toBeFalse();
 });
@@ -227,7 +226,7 @@ test('finishing the quiz shows a per-question review of right and wrong answers'
     $component->call('finish')
         ->assertSee($firstQuestion->body)
         ->assertSee('Javob berilmagan')
-        ->assertSee("To'g'ri javob:")
+        ->assertSee("To'g'ri javob")
         ->assertSee('Qonun asosi: 17-modda');
 
     expect($attempt->refresh()->score)->toBe(2);

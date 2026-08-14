@@ -247,7 +247,7 @@ new #[Title('Test')] class extends Component {
 
 <div class="mx-auto w-full">
     @if (! $attempt || $attempt->isFinished())
-        <flux:card class="mx-auto max-w-2xl space-y-6 p-6 sm:p-8 {{ $attempt?->isFinished() ? 'sm:max-w-3xl' : '' }}">
+        <flux:card class="mx-auto max-w-2xl space-y-6 p-6 sm:p-8">
             @if ($attempt?->isFinished())
                 <div class="space-y-2 text-center">
                     <flux:heading size="xl">{{ __('Test yakunlandi') }}</flux:heading>
@@ -256,49 +256,11 @@ new #[Title('Test')] class extends Component {
                         {{ $attempt->total > 0 ? round($attempt->score / $attempt->total * 100) : 0 }}%
                     </flux:text>
                 </div>
-
-                <div class="space-y-2">
-                    <flux:heading size="lg">{{ __("Savollar bo'yicha natija") }}</flux:heading>
-
-                    <div class="space-y-2">
-                        @foreach ($this->reviewRows as $review)
-                            <div
-                                wire:key="review-{{ $loop->index }}"
-                                @class([
-                                    'rounded-lg border p-3 text-sm sm:text-base',
-                                    'border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950' => $review['isCorrect'],
-                                    'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950' => ! $review['isCorrect'],
-                                ])
-                            >
-                                <flux:text class="font-semibold">{{ $loop->iteration }}. {{ $review['question'] }}</flux:text>
-
-                                <div class="mt-1 space-y-0.5">
-                                    <flux:text class="{{ $review['isCorrect'] ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' }}">
-                                        {{ __('Sizning javobingiz:') }} {{ $review['selected'] ?? __('Javob berilmagan') }}
-                                    </flux:text>
-
-                                    @unless ($review['isCorrect'])
-                                        <flux:text class="text-green-700 dark:text-green-400">
-                                            {{ __("To'g'ri javob:") }} {{ $review['correct'] }}
-                                        </flux:text>
-
-                                        @if ($review['explanation'])
-                                            <flux:text class="text-zinc-500 dark:text-zinc-400">
-                                                {{ __('Izoh:') }} {{ $review['explanation'] }}
-                                            </flux:text>
-                                        @endif
-                                    @endunless
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
             @else
                 <div class="space-y-2 text-center">
-                    <flux:heading size="xl">{{ __('Boshlashga tayyormisiz?') }}</flux:heading>
-                    <flux:text class="text-sm sm:text-base">
+                    <flux:heading size="xl">
                         {{ __(':count ta savol · :duration', ['count' => $this->questionCount, 'duration' => $this->durationLabel]) }}
-                    </flux:text>
+                    </flux:heading>
                 </div>
             @endif
 
@@ -312,10 +274,83 @@ new #[Title('Test')] class extends Component {
                         {{ $attempt?->isFinished() ? __('Qayta boshlash') : __('Testni boshlash') }}
                     </flux:button>
                 </flux:modal.trigger>
-            @else
-                <flux:callout variant="secondary" icon="check-circle" :heading="__('Urinishlar tugadi.')" />
             @endif
         </flux:card>
+
+        @if ($attempt?->isFinished())
+            <flux:card class="mx-auto mt-4 max-w-3xl space-y-3 p-6 sm:p-8">
+                <flux:heading size="lg">{{ __("Savollar bo'yicha natija") }}</flux:heading>
+
+                <div class="space-y-3">
+                    @foreach ($this->reviewRows as $review)
+                        {{-- The colour lives on a thin start-edge accent, so a page of
+                             wrong answers stays readable instead of a wall of red. --}}
+                        <div
+                            wire:key="review-{{ $loop->index }}"
+                            @class([
+                                'overflow-hidden rounded-lg border border-s-2 border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900',
+                                'border-s-green-500 dark:border-s-green-500' => $review['isCorrect'],
+                                'border-s-red-500 dark:border-s-red-500' => ! $review['isCorrect'],
+                            ])
+                        >
+                            <div class="flex items-start gap-3 p-4">
+                                <flux:text class="shrink-0 font-mono text-sm text-zinc-400 dark:text-zinc-500">
+                                    {{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}
+                                </flux:text>
+
+                                <div class="min-w-0 flex-1 space-y-3">
+                                    <flux:heading class="text-sm leading-relaxed sm:text-base">
+                                        {{ $review['question'] }}
+                                    </flux:heading>
+
+                                    <div class="space-y-2">
+                                        <div class="flex items-start gap-2">
+                                            @if ($review['isCorrect'])
+                                                <flux:icon.check-circle variant="mini" class="mt-0.5 shrink-0 text-green-600 dark:text-green-500" />
+                                            @else
+                                                <flux:icon.x-circle variant="mini" class="mt-0.5 shrink-0 text-red-500 dark:text-red-400" />
+                                            @endif
+
+                                            <div class="min-w-0">
+                                                <flux:text class="text-xs uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                                                    {{ __('Sizning javobingiz') }}
+                                                </flux:text>
+                                                <flux:text class="text-sm text-zinc-800 sm:text-base dark:text-zinc-200">
+                                                    {{ $review['selected'] ?? __('Javob berilmagan') }}
+                                                </flux:text>
+                                            </div>
+                                        </div>
+
+                                        @unless ($review['isCorrect'])
+                                            <div class="flex items-start gap-2">
+                                                <flux:icon.check-circle variant="mini" class="mt-0.5 shrink-0 text-green-600 dark:text-green-500" />
+
+                                                <div class="min-w-0">
+                                                    <flux:text class="text-xs uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                                                        {{ __("To'g'ri javob") }}
+                                                    </flux:text>
+                                                    <flux:text class="text-sm text-zinc-800 sm:text-base dark:text-zinc-200">
+                                                        {{ $review['correct'] }}
+                                                    </flux:text>
+                                                </div>
+                                            </div>
+                                        @endunless
+                                    </div>
+
+                                    @if (! $review['isCorrect'] && $review['explanation'])
+                                        <div class="rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-800">
+                                            <flux:text class="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                                                {{ $review['explanation'] }}
+                                            </flux:text>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </flux:card>
+        @endif
 
         <flux:modal name="start-quiz" class="w-full max-w-md">
             <div class="space-y-6">
