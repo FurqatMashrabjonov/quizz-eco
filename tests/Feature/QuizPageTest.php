@@ -33,7 +33,7 @@ test('the start screen warns about the rules before the test begins', function (
         ->assertSee('Testni boshlashdan oldin')
         ->assertSee('2 soat')
         ->assertSee('Savollar soni')
-        ->assertSee('Qolgan urinishlar')
+        ->assertDontSee('Qolgan urinishlar')
         ->assertSee('sanoq davom etadi', escape: false);
 });
 
@@ -200,6 +200,35 @@ test('a finished attempt with an empty layout is left alone', function () {
         ->assertSee('Test yakunlandi');
 
     expect(Attempt::query()->whereKey($finished->id)->exists())->toBeTrue();
+});
+
+test('finishing the quiz shows a per-question review of right and wrong answers', function () {
+    $user = User::factory()->create();
+
+    $component = Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->call('start');
+
+    $attempt = Attempt::query()->where('user_id', $user->id)->firstOrFail();
+
+    $firstQuestion = Question::findOrFail($attempt->layout[0]['q']);
+
+    // Leave the first question unanswered and answer every other question right.
+    foreach ($attempt->layout as $index => $entry) {
+        if ($index === 0) {
+            continue;
+        }
+
+        $correctId = Question::findOrFail($entry['q'])->options->firstWhere('is_correct', true)->id;
+        $component->set('currentIndex', $index)->set('selectedOptionId', $correctId);
+    }
+
+    $component->call('finish')
+        ->assertSee($firstQuestion->body)
+        ->assertSee('Javob berilmagan')
+        ->assertSee("To'g'ri javob:");
+
+    expect($attempt->refresh()->score)->toBe(2);
 });
 
 test('revisiting the page after time runs out finishes the attempt automatically', function () {

@@ -160,6 +160,36 @@ new #[Title('Test')] class extends Component {
         };
     }
 
+    /**
+     * Per-question breakdown for the finished-attempt review: what the user
+     * picked versus the correct option. Two queries total, not one per question.
+     *
+     * @return Collection<int, array{question: string, selected: ?string, correct: ?string, isCorrect: bool}>
+     */
+    #[Computed]
+    public function reviewRows(): Collection
+    {
+        $questions = Question::query()
+            ->with('options')
+            ->whereIn('id', $this->attempt->questionIds())
+            ->get()
+            ->keyBy('id');
+
+        $answers = $this->attempt->answers()->with('option')->get()->keyBy('question_id');
+
+        return collect($this->attempt->layout)->map(function (array $entry) use ($questions, $answers) {
+            $question = $questions[$entry['q']];
+            $selectedOption = $answers->get($entry['q'])?->option;
+
+            return [
+                'question' => $question->body,
+                'selected' => $selectedOption?->body,
+                'correct' => $question->options->firstWhere('is_correct', true)?->body,
+                'isCorrect' => $selectedOption?->is_correct ?? false,
+            ];
+        });
+    }
+
     #[Computed]
     public function questionCount(): int
     {
@@ -211,7 +241,7 @@ new #[Title('Test')] class extends Component {
 
 <div class="mx-auto w-full">
     @if (! $attempt || $attempt->isFinished())
-        <flux:card class="mx-auto max-w-2xl space-y-6 p-6 sm:p-8">
+        <flux:card class="mx-auto max-w-2xl space-y-6 p-6 sm:p-8 {{ $attempt?->isFinished() ? 'sm:max-w-3xl' : '' }}">
             @if ($attempt?->isFinished())
                 <div class="space-y-2 text-center">
                     <flux:heading size="xl">{{ __('Test yakunlandi') }}</flux:heading>
@@ -219,6 +249,37 @@ new #[Title('Test')] class extends Component {
                     <flux:text class="text-lg sm:text-xl">
                         {{ $attempt->total > 0 ? round($attempt->score / $attempt->total * 100) : 0 }}%
                     </flux:text>
+                </div>
+
+                <div class="space-y-2">
+                    <flux:heading size="lg">{{ __("Savollar bo'yicha natija") }}</flux:heading>
+
+                    <div class="space-y-2">
+                        @foreach ($this->reviewRows as $review)
+                            <div
+                                wire:key="review-{{ $loop->index }}"
+                                @class([
+                                    'rounded-lg border p-3 text-sm sm:text-base',
+                                    'border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950' => $review['isCorrect'],
+                                    'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950' => ! $review['isCorrect'],
+                                ])
+                            >
+                                <flux:text class="font-semibold">{{ $loop->iteration }}. {{ $review['question'] }}</flux:text>
+
+                                <div class="mt-1 space-y-0.5">
+                                    <flux:text class="{{ $review['isCorrect'] ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' }}">
+                                        {{ __('Sizning javobingiz:') }} {{ $review['selected'] ?? __('Javob berilmagan') }}
+                                    </flux:text>
+
+                                    @unless ($review['isCorrect'])
+                                        <flux:text class="text-green-700 dark:text-green-400">
+                                            {{ __("To'g'ri javob:") }} {{ $review['correct'] }}
+                                        </flux:text>
+                                    @endunless
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             @else
                 <div class="space-y-2 text-center">
@@ -239,7 +300,6 @@ new #[Title('Test')] class extends Component {
                         {{ $attempt?->isFinished() ? __('Qayta boshlash') : __('Testni boshlash') }}
                     </flux:button>
                 </flux:modal.trigger>
-                <flux:text class="text-center text-sm sm:text-base">{{ __(':count ta urinish qoldi', ['count' => $this->attemptsRemaining]) }}</flux:text>
             @else
                 <flux:callout variant="secondary" icon="check-circle" :heading="__('Urinishlar tugadi.')" />
             @endif
@@ -260,10 +320,6 @@ new #[Title('Test')] class extends Component {
                     <div class="flex items-center justify-between p-3">
                         <flux:text>{{ __('Berilgan vaqt') }}</flux:text>
                         <flux:text class="font-semibold">{{ $this->durationLabel }}</flux:text>
-                    </div>
-                    <div class="flex items-center justify-between p-3">
-                        <flux:text>{{ __('Qolgan urinishlar') }}</flux:text>
-                        <flux:text class="font-semibold">{{ $this->attemptsRemaining }} {{ __('ta') }}</flux:text>
                     </div>
                 </div>
 
