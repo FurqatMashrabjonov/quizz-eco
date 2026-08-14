@@ -33,11 +33,11 @@ class AttemptResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
-    protected static ?string $modelLabel = 'Urinish';
+    protected static ?string $modelLabel = 'Natija';
 
-    protected static ?string $pluralModelLabel = 'Urinishlar';
+    protected static ?string $pluralModelLabel = 'Natijalar';
 
-    protected static ?string $navigationLabel = 'Urinishlar';
+    protected static ?string $navigationLabel = 'Natijalar';
 
     public static function infolist(Schema $schema): Schema
     {
@@ -234,9 +234,9 @@ class AttemptResource extends Resource
                 ViewAction::make(),
                 // Deleting an attempt frees up the user's quota so they can retake.
                 DeleteAction::make()
-                    ->modalHeading('Urinishni o\'chirish')
-                    ->modalDescription('Urinish va undagi barcha javoblar o\'chiriladi. Bu foydalanuvchiga qaytadan test topshirish imkonini beradi.')
-                    ->successNotificationTitle('Urinish o\'chirildi'),
+                    ->modalHeading('Natijani o\'chirish')
+                    ->modalDescription('Natija va undagi barcha javoblar o\'chiriladi. Bu foydalanuvchiga qaytadan test topshirish imkonini beradi.')
+                    ->successNotificationTitle('Natija o\'chirildi'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

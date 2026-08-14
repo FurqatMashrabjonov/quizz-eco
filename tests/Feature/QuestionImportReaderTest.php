@@ -39,6 +39,27 @@ test('it classifies a row as new when the question body is free', function () {
     unlink($path);
 });
 
+test('it captures the optional explanation column', function () {
+    $path = makeQuestionImportFile([['Savol', '1', '2', '3', '4', 'a', 'Huquqiy asos: ORQ-1036, 17-modda']]);
+
+    $rows = QuestionImportReader::parse($path);
+
+    expect($rows[0]['explanation'])->toBe('Huquqiy asos: ORQ-1036, 17-modda');
+
+    unlink($path);
+});
+
+test('a missing explanation does not make the row invalid', function () {
+    $path = makeQuestionImportFile([['Savol', '1', '2', '3', '4', 'a']]);
+
+    $rows = QuestionImportReader::parse($path);
+
+    expect($rows[0]['status'])->toBe('new')
+        ->and($rows[0]['explanation'])->toBe('');
+
+    unlink($path);
+});
+
 test('it lowercases the answer letter', function () {
     $path = makeQuestionImportFile([['Savol', '1', '2', '3', '4', 'C']]);
 

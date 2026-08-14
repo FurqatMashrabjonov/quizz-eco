@@ -12,11 +12,12 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $body
+ * @property string|null $explanation
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['body', 'is_active'])]
+#[Fillable(['body', 'explanation', 'is_active'])]
 class Question extends Model
 {
     /** @use HasFactory<QuestionFactory> */

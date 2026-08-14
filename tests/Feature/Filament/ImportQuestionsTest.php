@@ -69,6 +69,19 @@ test('confirming the import creates only the new rows and marks the right option
         ->and($created->options->firstWhere('is_correct', true)->body)->toBe('3');
 });
 
+test('the explanation column is saved on the question', function () {
+    Livewire::test(ImportQuestions::class)
+        ->set('data.file', [])
+        ->upload('data.file', [uploadableQuestionImportFile([
+            ['Yangi savol', '1', '2', '3', '4', 'a', 'Huquqiy asos: ORQ-1036, 17-modda'],
+        ])])
+        ->call('preview')
+        ->call('import');
+
+    expect(Question::query()->where('body', 'Yangi savol')->value('explanation'))
+        ->toBe('Huquqiy asos: ORQ-1036, 17-modda');
+});
+
 test('the existing question is left untouched by a repeat import', function () {
     $existing = Question::factory()->create(['body' => 'Allaqachon mavjud savol']);
     $optionCountBefore = $existing->options()->count();

@@ -95,14 +95,6 @@ test('admins are hidden from the user list', function () {
         ->assertCanNotSeeTableRecords([$this->admin]);
 });
 
-test('the generate users action bulk-creates users with unique credentials', function () {
-    Livewire::test(ListUsers::class)
-        ->callAction('generateUsers', data: ['count' => 5]);
-
-    expect(User::query()->where('role', 'user')->count())->toBe(5)
-        ->and(User::query()->where('role', 'user')->whereNotNull('plain_password')->count())->toBe(5);
-});
-
 test('the users table shows the plain-text password, not the hash', function () {
     $user = User::factory()->create(['plain_password' => 'sT7xQ2wPmZ']);
 

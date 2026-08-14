@@ -36,6 +36,7 @@
                                 <th class="px-3 py-2 text-start font-medium">C</th>
                                 <th class="px-3 py-2 text-start font-medium">D</th>
                                 <th class="px-3 py-2 text-start font-medium">To'g'ri</th>
+                                <th class="px-3 py-2 text-start font-medium">Izoh</th>
                                 <th class="px-3 py-2 text-start font-medium">Holat</th>
                             </tr>
                         </thead>
@@ -49,6 +50,7 @@
                                     <td class="px-3 py-2">{{ $row['options']['c'] }}</td>
                                     <td class="px-3 py-2">{{ $row['options']['d'] }}</td>
                                     <td class="px-3 py-2 font-mono uppercase">{{ $row['answer'] }}</td>
+                                    <td class="px-3 py-2 text-gray-500">{{ $row['explanation'] ?: '-' }}</td>
                                     <td class="px-3 py-2">
                                         @php
                                             [$label, $color] = match ($row['status']) {

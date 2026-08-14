@@ -26,6 +26,10 @@ class QuestionForm
                     ->label('Savol matni')
                     ->required()
                     ->columnSpanFull(),
+                Textarea::make('explanation')
+                    ->label('Izoh')
+                    ->helperText("To'g'ri javob uchun izoh yoki huquqiy asos (ixtiyoriy).")
+                    ->columnSpanFull(),
                 Toggle::make('is_active')
                     ->label('Faol')
                     ->default(true)

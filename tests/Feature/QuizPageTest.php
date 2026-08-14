@@ -212,6 +212,7 @@ test('finishing the quiz shows a per-question review of right and wrong answers'
     $attempt = Attempt::query()->where('user_id', $user->id)->firstOrFail();
 
     $firstQuestion = Question::findOrFail($attempt->layout[0]['q']);
+    $firstQuestion->update(['explanation' => 'Qonun asosi: 17-modda']);
 
     // Leave the first question unanswered and answer every other question right.
     foreach ($attempt->layout as $index => $entry) {
@@ -226,9 +227,35 @@ test('finishing the quiz shows a per-question review of right and wrong answers'
     $component->call('finish')
         ->assertSee($firstQuestion->body)
         ->assertSee('Javob berilmagan')
-        ->assertSee("To'g'ri javob:");
+        ->assertSee("To'g'ri javob:")
+        ->assertSee('Qonun asosi: 17-modda');
 
     expect($attempt->refresh()->score)->toBe(2);
+});
+
+test('the review survives a question that was deleted after the attempt finished', function () {
+    $user = User::factory()->create();
+
+    $component = Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->call('start');
+
+    $attempt = Attempt::query()->where('user_id', $user->id)->firstOrFail();
+
+    foreach ($attempt->layout as $index => $entry) {
+        $correctId = Question::findOrFail($entry['q'])->options->firstWhere('is_correct', true)->id;
+        $component->set('currentIndex', $index)->set('selectedOptionId', $correctId);
+    }
+
+    $component->call('finish');
+
+    // An admin deletes one of the questions this attempt was built from.
+    Question::findOrFail($attempt->layout[0]['q'])->delete();
+
+    Livewire::actingAs($user)
+        ->test('pages::quiz')
+        ->assertSuccessful()
+        ->assertSee('Test yakunlandi');
 });
 
 test('revisiting the page after time runs out finishes the attempt automatically', function () {

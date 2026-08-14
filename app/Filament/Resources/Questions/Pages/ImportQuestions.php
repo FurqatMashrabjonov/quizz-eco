@@ -29,7 +29,7 @@ class ImportQuestions extends Page
     public ?array $data = [];
 
     /**
-     * @var list<array{row: int, body: string, options: array{a: string, b: string, c: string, d: string}, answer: string, status: string}>
+     * @var list<array{row: int, body: string, options: array{a: string, b: string, c: string, d: string}, answer: string, explanation: string, status: string}>
      */
     public array $rows = [];
 
@@ -46,7 +46,7 @@ class ImportQuestions extends Page
                     ->disk('local')
                     ->directory('imports')
                     ->visibility('private')
-                    ->helperText('Ustunlar tartibi: Savol, Variant A, Variant B, Variant C, Variant D, Javob (a/b/c/d). Birinchi qator sarlavha deb hisoblanadi.'),
+                    ->helperText('Ustunlar tartibi: Savol, Variant A, Variant B, Variant C, Variant D, Javob (a/b/c/d), Izoh (ixtiyoriy). Birinchi qator sarlavha deb hisoblanadi.'),
             ])
             ->statePath('data');
     }
@@ -81,6 +81,7 @@ class ImportQuestions extends Page
             foreach ($newRows as $row) {
                 $question = Question::create([
                     'body' => $row['body'],
+                    'explanation' => $row['explanation'] !== '' ? $row['explanation'] : null,
                     'is_active' => true,
                 ]);
 

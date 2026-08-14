@@ -164,7 +164,7 @@ new #[Title('Test')] class extends Component {
      * Per-question breakdown for the finished-attempt review: what the user
      * picked versus the correct option. Two queries total, not one per question.
      *
-     * @return Collection<int, array{question: string, selected: ?string, correct: ?string, isCorrect: bool}>
+     * @return Collection<int, array{question: string, selected: ?string, correct: ?string, explanation: ?string, isCorrect: bool}>
      */
     #[Computed]
     public function reviewRows(): Collection
@@ -177,17 +177,23 @@ new #[Title('Test')] class extends Component {
 
         $answers = $this->attempt->answers()->with('option')->get()->keyBy('question_id');
 
-        return collect($this->attempt->layout)->map(function (array $entry) use ($questions, $answers) {
-            $question = $questions[$entry['q']];
-            $selectedOption = $answers->get($entry['q'])?->option;
+        return collect($this->attempt->layout)
+            // A question answered at the time can be deleted by an admin afterwards;
+            // the layout still references its id, so skip it rather than crash.
+            ->filter(fn (array $entry) => $questions->has($entry['q']))
+            ->map(function (array $entry) use ($questions, $answers) {
+                $question = $questions[$entry['q']];
+                $selectedOption = $answers->get($entry['q'])?->option;
 
-            return [
-                'question' => $question->body,
-                'selected' => $selectedOption?->body,
-                'correct' => $question->options->firstWhere('is_correct', true)?->body,
-                'isCorrect' => $selectedOption?->is_correct ?? false,
-            ];
-        });
+                return [
+                    'question' => $question->body,
+                    'selected' => $selectedOption?->body,
+                    'correct' => $question->options->firstWhere('is_correct', true)?->body,
+                    'explanation' => $question->explanation,
+                    'isCorrect' => $selectedOption?->is_correct ?? false,
+                ];
+            })
+            ->values();
     }
 
     #[Computed]
@@ -275,6 +281,12 @@ new #[Title('Test')] class extends Component {
                                         <flux:text class="text-green-700 dark:text-green-400">
                                             {{ __("To'g'ri javob:") }} {{ $review['correct'] }}
                                         </flux:text>
+
+                                        @if ($review['explanation'])
+                                            <flux:text class="text-zinc-500 dark:text-zinc-400">
+                                                {{ __('Izoh:') }} {{ $review['explanation'] }}
+                                            </flux:text>
+                                        @endif
                                     @endunless
                                 </div>
                             </div>

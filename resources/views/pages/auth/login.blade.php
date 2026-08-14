@@ -1,6 +1,6 @@
 <x-layouts::auth :title="__('Kirish')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Hisobingizga kiring')" :description="__('Davom etish uchun login va parolingizni kiriting')" />
+        <x-auth-header :title="__('Kirish')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
